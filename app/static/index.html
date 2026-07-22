@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Postscript — Blog API Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#22262E; --paper:#F6F4EE; --paper-raised:#FFFFFF;
+    --teal:#2E6F63; --teal-dark:#204F46; --coral:#C9524B;
+    --muted:#837C6C; --line:#E3DECE; --line-soft:#EDE9DB;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper); color:var(--ink); font-family:'Inter', sans-serif; min-height:100vh;}
+  ::selection{background:var(--teal); color:#fff;}
+  a{color:inherit;}
+
+  nav{background:var(--paper-raised); border-bottom:1px solid var(--line); padding:18px 40px; position:sticky; top:0; z-index:30;}
+  .nav-row{max-width:1080px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px;}
+  .brand{font-family:'Newsreader', serif; font-weight:700; font-size:23px; display:flex; align-items:center; gap:8px;}
+  .brand .dot{color:var(--teal); font-size:26px; line-height:0;}
+  .nav-actions{display:flex; align-items:center; gap:10px;}
+  .user-chip{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--teal-dark); background:rgba(46,111,99,0.08); border:1px solid rgba(46,111,99,0.25); padding:6px 11px; border-radius:20px;}
+
+  button{font-family:'Inter', sans-serif; cursor:pointer;}
+  .btn-primary{background:var(--ink); color:#fff; border:1px solid var(--ink); padding:9px 16px; border-radius:5px; font-size:13.5px; font-weight:600;}
+  .btn-primary:hover{background:#3A404B;}
+  .btn-primary:disabled{opacity:0.5; cursor:not-allowed;}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink); padding:9px 16px; border-radius:5px; font-size:13.5px; font-weight:500;}
+  .btn-ghost:hover{border-color:var(--ink);}
+  .btn-danger-text{background:transparent; border:none; color:var(--coral); font-size:12.5px; font-weight:500;}
+  .btn-danger-text:hover{text-decoration:underline;}
+  .link-btn{background:none;border:none;padding:0;color:var(--teal-dark);font-weight:600;text-decoration:underline;cursor:pointer;font-size:inherit;}
+
+  .api-strip{background:var(--ink); color:#C9C4B4; font-family:'IBM Plex Mono', monospace; font-size:12px; padding:8px 40px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+  .api-strip .max{max-width:1080px; margin:0 auto; width:100%; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+  .api-strip .status-dot{margin-right:6px;}
+  .status-dot.ok{color:#6FBF9A;}
+  .status-dot.bad{color:var(--coral);}
+
+  main{max-width:1080px; margin:0 auto; padding:40px 40px 80px; display:grid; grid-template-columns:1fr 260px; gap:34px;}
+  .feed-header{grid-column:1 / -1; display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; flex-wrap:wrap; gap:10px;}
+  .feed-header h1{font-family:'Newsreader', serif; font-weight:600; font-style:italic; font-size:28px; margin:0;}
+  .feed-header .sub{font-size:13px; color:var(--muted);}
+
+  .feed{display:flex; flex-direction:column; gap:16px;}
+  .post-card{background:var(--paper-raised); border:1px solid var(--line); border-radius:6px; padding:22px 24px; position:relative; transition:border-color .15s ease;}
+  .post-card:hover{border-color:var(--teal);}
+  .post-route{position:absolute; top:20px; right:22px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted); background:var(--line-soft); padding:3px 8px; border-radius:3px;}
+  .post-title{font-family:'Newsreader', serif; font-weight:600; font-size:20px; margin:0 0 8px; cursor:pointer; padding-right:110px;}
+  .post-title:hover{color:var(--teal-dark);}
+  .post-excerpt{font-size:14px; line-height:1.6; color:#4A473F; margin:0 0 14px;}
+  .post-meta{display:flex; align-items:center; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--muted);}
+  .tag{background:rgba(46,111,99,0.09); color:var(--teal-dark); padding:3px 9px; border-radius:20px; font-size:11.5px;}
+  .post-footer{display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid var(--line-soft);}
+
+  .sidebar{display:flex; flex-direction:column; gap:18px;}
+  .side-box{background:var(--paper-raised); border:1px solid var(--line); border-radius:6px; padding:18px 20px;}
+  .side-box h3{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin:0 0 12px;}
+  .endpoint-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px;}
+  .endpoint-list li{font-family:'IBM Plex Mono', monospace; font-size:11.5px; display:flex; gap:8px; align-items:center;}
+  .verb{font-weight:600; width:40px; display:inline-block; text-align:center; border-radius:3px; padding:1px 0; font-size:10px;}
+  .verb.get{background:rgba(46,111,99,0.12); color:var(--teal-dark);}
+  .verb.post{background:rgba(58,110,196,0.12); color:#2D5AA6;}
+  .verb.delete{background:rgba(201,82,75,0.12); color:var(--coral);}
+  .stat-row{display:flex; justify-content:space-between; font-size:13px; padding:5px 0;}
+  .stat-row b{font-family:'IBM Plex Mono', monospace;}
+
+  .overlay{position:fixed; inset:0; background:rgba(34,38,46,0.4); opacity:0; pointer-events:none; transition:opacity .18s ease; z-index:50;}
+  .overlay.show{opacity:1; pointer-events:auto;}
+  .modal{position:fixed; top:50%; left:50%; transform:translate(-50%,-48%) scale(0.97); background:var(--paper-raised); border-radius:8px; width:560px; max-width:92vw; max-height:86vh; overflow-y:auto; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; z-index:55; box-shadow:0 18px 50px rgba(0,0,0,0.18);}
+  .modal.show{opacity:1; transform:translate(-50%,-50%) scale(1); pointer-events:auto;}
+  .modal-header{padding:22px 26px 14px; border-bottom:1px solid var(--line-soft); display:flex; justify-content:space-between; align-items:flex-start; gap:12px;}
+  .modal-header .route-tag{font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted); background:var(--line-soft); padding:3px 8px; border-radius:3px; display:inline-block; margin-bottom:8px;}
+  .modal-header h2{font-family:'Newsreader', serif; font-size:22px; margin:0;}
+  .modal-close{background:transparent; border:none; font-size:18px; color:var(--muted); flex-shrink:0;}
+  .modal-close:hover{color:var(--coral);}
+  .modal-body{padding:20px 26px 8px;}
+  .modal-body p{font-size:14.5px; line-height:1.7; color:#3E3B34;}
+  .modal-footer{padding:16px 26px 24px;}
+
+  .field{margin-bottom:15px;}
+  .field label{display:block; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:0.8px; text-transform:uppercase; color:var(--muted); margin-bottom:6px;}
+  .field input, .field textarea{width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:4px; font-family:'Inter', sans-serif; font-size:14px; resize:vertical;}
+  .field input:focus, .field textarea:focus{outline:2px solid var(--teal); outline-offset:1px;}
+  .field-error{color:var(--coral); font-size:11.5px; margin-top:4px; display:none; font-family:'IBM Plex Mono', monospace;}
+  .field.has-error input, .field.has-error textarea{border-color:var(--coral);}
+  .field.has-error .field-error{display:block;}
+  .modal-actions{display:flex; gap:10px;}
+  .modal-actions .btn-primary, .modal-actions .btn-ghost{flex:1; text-align:center;}
+  .form-error-banner{background:rgba(201,82,75,0.08); border:1px solid rgba(201,82,75,0.3); color:var(--coral); font-size:12.5px; padding:9px 12px; border-radius:5px; margin-bottom:14px; display:none;}
+
+  .comments-head{font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); margin:18px 0 10px;}
+  .comment{border-left:2px solid var(--line); padding:6px 0 6px 14px; margin-bottom:12px; display:flex; justify-content:space-between; gap:10px;}
+  .comment .c-author{font-weight:600; font-size:13px;}
+  .comment .c-time{font-size:11px; color:var(--muted); margin-left:8px; font-family:'IBM Plex Mono', monospace;}
+  .comment .c-body{font-size:13.5px; margin-top:3px; color:#42403A; line-height:1.55;}
+  .no-comments{font-size:13px; color:var(--muted); font-style:italic;}
+  .login-hint{font-size:12.5px; color:var(--muted); background:var(--line-soft); padding:9px 12px; border-radius:5px; margin-top:10px;}
+  .spinner-text{font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--muted); padding:20px 0;}
+
+  .toast{position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; padding:11px 18px; border-radius:5px; font-family:'IBM Plex Mono', monospace; font-size:12.5px; border-left:4px solid var(--teal); opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; z-index:70;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.error{border-left-color:var(--coral);}
+
+  .tabs{display:flex; gap:8px; margin-bottom:16px;}
+  .tab-btn{background:transparent; border:1px solid var(--line); padding:6px 14px; border-radius:20px; font-size:12.5px; color:var(--muted);}
+  .tab-btn.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+
+  @media (max-width:820px){
+    main{grid-template-columns:1fr; padding:26px 20px 60px;}
+    nav{padding:16px 20px;} .api-strip{padding:8px 20px;}
+    .post-title{padding-right:0;}
+    .post-route{position:static; display:inline-block; margin-bottom:8px;}
+  }
+  @media (prefers-reduced-motion: reduce){*{transition:none !important;}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-row">
+    <div class="brand"><span class="dot">◆</span>Postscript</div>
+    <div class="nav-actions">
+      <button class="btn-ghost" id="writeBtn">Write a post</button>
+      <span class="user-chip" id="userChip" style="display:none;"></span>
+      <button class="btn-primary" id="authBtn">Log in</button>
+    </div>
+  </div>
+</nav>
+
+<div class="api-strip">
+  <div class="max">
+    <span><span class="status-dot" id="apiStatusDot">●</span><span id="apiStatusText">checking API…</span></span>
+    <span id="authStatusText">auth: anonymous</span>
+  </div>
+</div>
+
+<main>
+  <div class="feed-header">
+    <h1>Recent posts</h1>
+    <span class="sub" id="postCountLabel">loading…</span>
+  </div>
+
+  <div class="feed" id="feed">
+    <div class="spinner-text">Fetching GET /api/posts…</div>
+  </div>
+
+  <div class="sidebar">
+    <div class="side-box">
+      <h3>API endpoints</h3>
+      <ul class="endpoint-list">
+        <li><span class="verb get">GET</span> /api/posts</li>
+        <li><span class="verb post">POST</span> /api/posts</li>
+        <li><span class="verb delete">DEL</span> /api/posts/:id</li>
+        <li><span class="verb get">GET</span> /api/posts/:id/comments</li>
+        <li><span class="verb post">POST</span> /api/posts/:id/comments</li>
+        <li><span class="verb post">POST</span> /api/auth/login</li>
+        <li><span class="verb post">POST</span> /api/auth/register</li>
+      </ul>
+    </div>
+    <div class="side-box">
+      <h3>Session</h3>
+      <div class="stat-row"><span>Status</span><b id="sessionStatus">Anonymous</b></div>
+      <div class="stat-row"><span>Token</span><b id="sessionToken">—</b></div>
+      <div class="stat-row"><span>Posts loaded</span><b id="postsLoaded">0</b></div>
+    </div>
+  </div>
+</main>
+
+<!-- Post detail modal -->
+<div class="overlay" id="overlay"></div>
+<div class="modal" id="postModal">
+  <div class="modal-header">
+    <div>
+      <span class="route-tag" id="detailRoute">GET /api/posts/1</span>
+      <h2 id="detailTitle">Post title</h2>
+    </div>
+    <button class="modal-close" data-close>✕</button>
+  </div>
+  <div class="modal-body">
+    <p id="detailMeta" style="font-size:12.5px; color:var(--muted); margin-top:-6px;"></p>
+    <p id="detailContent"></p>
+
+    <div class="comments-head" id="commentsHead">Comments</div>
+    <div id="commentsList"></div>
+
+    <div id="commentFormWrap">
+      <div class="field">
+        <label>Add a comment</label>
+        <textarea id="commentInput" rows="2" placeholder="Share your thoughts…"></textarea>
+      </div>
+      <button class="btn-primary" id="submitCommentBtn">Post comment</button>
+    </div>
+    <div class="login-hint" id="commentLoginHint" style="display:none;">
+      <button class="link-btn" id="hintLoginLink">Log in</button> to join the discussion.
+    </div>
+  </div>
+  <div class="modal-footer"></div>
+</div>
+
+<!-- New post modal -->
+<div class="modal" id="newPostModal">
+  <div class="modal-header">
+    <div>
+      <span class="route-tag">POST /api/posts</span>
+      <h2>Write a new post</h2>
+    </div>
+    <button class="modal-close" data-close>✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-error-banner" id="postFormError"></div>
+    <form id="newPostForm" novalidate>
+      <div class="field" id="f-title">
+        <label for="np-title">Title</label>
+        <input type="text" id="np-title" placeholder="Give your post a title">
+        <div class="field-error">A title is required.</div>
+      </div>
+      <div class="field" id="f-tags">
+        <label for="np-tags">Tags (comma separated)</label>
+        <input type="text" id="np-tags" placeholder="flask, api, tutorial">
+      </div>
+      <div class="field" id="f-content">
+        <label for="np-content">Content</label>
+        <textarea id="np-content" rows="5" placeholder="Write your post…"></textarea>
+        <div class="field-error">Post content can't be empty.</div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <div class="modal-actions">
+      <button class="btn-ghost" data-close>Cancel</button>
+      <button class="btn-primary" id="publishBtn">Publish post</button>
+    </div>
+  </div>
+</div>
+
+<!-- Login / Register modal -->
+<div class="modal" id="loginModal">
+  <div class="modal-header">
+    <div>
+      <span class="route-tag" id="authRouteTag">POST /api/auth/login</span>
+      <h2 id="authModalTitle">Log in</h2>
+    </div>
+    <button class="modal-close" data-close>✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="tabs">
+      <button class="tab-btn active" id="tabLogin">Log in</button>
+      <button class="tab-btn" id="tabRegister">Register</button>
+    </div>
+    <div class="form-error-banner" id="authFormError"></div>
+    <form id="loginForm" novalidate>
+      <div class="field" id="f-username">
+        <label for="lg-username">Username</label>
+        <input type="text" id="lg-username" placeholder="e.g. arjun_verma" autocomplete="username">
+        <div class="field-error">Enter a username.</div>
+      </div>
+      <div class="field" id="f-password">
+        <label for="lg-password">Password</label>
+        <input type="password" id="lg-password" placeholder="••••••••" autocomplete="current-password">
+        <div class="field-error">Enter a password (4+ characters).</div>
+      </div>
+    </form>
+    <p style="font-size:12px; color:var(--muted);" id="authHelperText">
+      Try the seeded account — username <b>arjun_verma</b>, password <b>password123</b> — or register a new one.
+    </p>
+  </div>
+  <div class="modal-footer">
+    <div class="modal-actions">
+      <button class="btn-ghost" data-close>Cancel</button>
+      <button class="btn-primary" id="authSubmitBtn">Log in</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---------- Real API client — talks to this Flask backend over fetch ----------
+  const API = ""; // same-origin, served by Flask
+
+  let token = localStorage.getItem("ps_token") || null;
+  let currentUser = localStorage.getItem("ps_user") || null;
+  let posts = [];
+  let activePostId = null;
+  let authMode = "login"; // or "register"
+
+  function authHeaders(){
+    return token ? {"Authorization": "Bearer " + token} : {};
+  }
+
+  async function api(path, options = {}){
+    const res = await fetch(API + path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+        ...(options.headers || {})
+      }
+    });
+    let body = null;
+    const text = await res.text();
+    if(text){ try{ body = JSON.parse(text); } catch(e){ body = null; } }
+    if(!res.ok){
+      const err = new Error((body && body.error) || `Request failed (${res.status})`);
+      err.status = res.status;
+      throw err;
+    }
+    return body;
+  }
+
+  // ---------- API health check ----------
+  async function checkApi(){
+    const dot = document.getElementById('apiStatusDot');
+    const text = document.getElementById('apiStatusText');
+    try{
+      await api('/api/posts');
+      dot.className = 'status-dot ok';
+      text.textContent = 'api ' + window.location.origin + ' — connected';
+    }catch(e){
+      dot.className = 'status-dot bad';
+      text.textContent = 'API unreachable — is the Flask server running?';
+    }
+  }
+
+  // ---------- Feed ----------
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function timeAgo(iso){
+    const diff = (Date.now() - new Date(iso + "Z")) / 1000;
+    if(diff < 60) return "just now";
+    if(diff < 3600) return Math.floor(diff/60) + "m ago";
+    if(diff < 86400) return Math.floor(diff/3600) + "h ago";
+    return Math.floor(diff/86400) + "d ago";
+  }
+
+  async function loadPosts(){
+    const feed = document.getElementById('feed');
+    try{
+      posts = await api('/api/posts');
+      renderFeed();
+    }catch(e){
+      feed.innerHTML = `<div class="spinner-text">Couldn't reach the API: ${escapeHtml(e.message)}</div>`;
+    }
+  }
+
+  function renderFeed(){
+    const feed = document.getElementById('feed');
+    document.getElementById('postCountLabel').textContent = posts.length + (posts.length === 1 ? ' post' : ' posts');
+    document.getElementById('postsLoaded').textContent = posts.length;
+
+    if(!posts.length){
+      feed.innerHTML = `<div class="spinner-text">No posts yet — write the first one.</div>`;
+      return;
+    }
+
+    feed.innerHTML = posts.map(p => `
+      <div class="post-card">
+        <span class="post-route">GET /api/posts/${p.id}</span>
+        <h2 class="post-title" data-open="${p.id}">${escapeHtml(p.title)}</h2>
+        <p class="post-excerpt">${escapeHtml(p.content.slice(0,140))}${p.content.length>140?'…':''}</p>
+        <div class="post-meta">
+          <span>by <strong>${escapeHtml(p.author)}</strong></span>
+          <span>${timeAgo(p.created_at)}</span>
+          <span>${p.comment_count} comment${p.comment_count===1?'':'s'}</span>
+        </div>
+        <div class="post-footer">
+          <div>${p.tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join(' ')}</div>
+          ${currentUser === p.author ? `<button class="btn-danger-text" data-delete="${p.id}">Delete post</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('feed').addEventListener('click', (e)=>{
+    const openId = e.target.getAttribute('data-open');
+    const delId = e.target.getAttribute('data-delete');
+    if(openId) openPost(Number(openId));
+    if(delId) deletePost(Number(delId));
+  });
+
+  async function deletePost(id){
+    const p = posts.find(x=>x.id===id);
+    if(!p) return;
+    if(!confirm(`Remove "${p.title}"? This calls DELETE /api/posts/${id}.`)) return;
+    try{
+      await api(`/api/posts/${id}`, {method:'DELETE'});
+      showToast(`DELETE /api/posts/${id} → 204 No Content`);
+      await loadPosts();
+    }catch(e){
+      showToast(e.message, true);
+    }
+  }
+
+  // ---------- Overlay / modal plumbing ----------
+  const overlay = document.getElementById('overlay');
+  const postModal = document.getElementById('postModal');
+  const newPostModal = document.getElementById('newPostModal');
+  const loginModal = document.getElementById('loginModal');
+
+  function showModal(modal){ overlay.classList.add('show'); modal.classList.add('show'); }
+  function hideAllModals(){
+    overlay.classList.remove('show');
+    [postModal, newPostModal, loginModal].forEach(m=>m.classList.remove('show'));
+  }
+  overlay.addEventListener('click', hideAllModals);
+  document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click', hideAllModals));
+
+  // ---------- Post detail ----------
+  async function openPost(id){
+    activePostId = id;
+    document.getElementById('detailRoute').textContent = `GET /api/posts/${id}`;
+    document.getElementById('detailContent').textContent = 'Loading…';
+    document.getElementById('commentsList').innerHTML = '';
+    showModal(postModal);
+    try{
+      const p = await api(`/api/posts/${id}`);
+      document.getElementById('detailTitle').textContent = p.title;
+      document.getElementById('detailMeta').textContent = `by ${p.author} · ${timeAgo(p.created_at)} · ${p.tags.join(', ')}`;
+      document.getElementById('detailContent').textContent = p.content;
+      renderComments(p);
+    }catch(e){
+      document.getElementById('detailContent').textContent = 'Could not load this post: ' + e.message;
+    }
+  }
+
+  function renderComments(p){
+    document.getElementById('commentsHead').textContent = `Comments (${p.comments.length})`;
+    const list = document.getElementById('commentsList');
+    list.innerHTML = p.comments.length
+      ? p.comments.map(c=>`
+          <div class="comment">
+            <div>
+              <span class="c-author">${escapeHtml(c.author)}</span><span class="c-time">${timeAgo(c.created_at)}</span>
+              <div class="c-body">${escapeHtml(c.body)}</div>
+            </div>
+            ${currentUser === c.author ? `<button class="btn-danger-text" data-del-comment="${c.id}">Delete</button>` : ''}
+          </div>`).join('')
+      : `<div class="no-comments">No comments yet — be the first to respond.</div>`;
+
+    list.querySelectorAll('[data-del-comment]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const cid = btn.getAttribute('data-del-comment');
+        try{
+          await api(`/api/comments/${cid}`, {method:'DELETE'});
+          showToast(`DELETE /api/comments/${cid} → 204 No Content`);
+          const fresh = await api(`/api/posts/${activePostId}`);
+          renderComments(fresh);
+          await loadPosts();
+        }catch(e){ showToast(e.message, true); }
+      });
+    });
+
+    const formWrap = document.getElementById('commentFormWrap');
+    const hint = document.getElementById('commentLoginHint');
+    if(currentUser){ formWrap.style.display = 'block'; hint.style.display = 'none'; }
+    else { formWrap.style.display = 'none'; hint.style.display = 'block'; }
+  }
+
+  document.getElementById('submitCommentBtn').addEventListener('click', async ()=>{
+    const input = document.getElementById('commentInput');
+    const body = input.value.trim();
+    if(!body || !activePostId) return;
+    try{
+      await api(`/api/posts/${activePostId}/comments`, {method:'POST', body: JSON.stringify({body})});
+      input.value = '';
+      showToast(`POST /api/posts/${activePostId}/comments → 201 Created`);
+      const fresh = await api(`/api/posts/${activePostId}`);
+      renderComments(fresh);
+      await loadPosts();
+    }catch(e){ showToast(e.message, true); }
+  });
+
+  document.getElementById('hintLoginLink').addEventListener('click', ()=>{
+    hideAllModals();
+    setTimeout(()=>showModal(loginModal), 180);
+  });
+
+  // ---------- New post ----------
+  document.getElementById('writeBtn').addEventListener('click', ()=>{
+    if(!currentUser){ showModal(loginModal); return; }
+    document.getElementById('np-title').value = '';
+    document.getElementById('np-tags').value = '';
+    document.getElementById('np-content').value = '';
+    document.getElementById('postFormError').style.display = 'none';
+    ['f-title','f-content'].forEach(id=>document.getElementById(id).classList.remove('has-error'));
+    showModal(newPostModal);
+  });
+
+  document.getElementById('publishBtn').addEventListener('click', async ()=>{
+    const title = document.getElementById('np-title').value.trim();
+    const tagsRaw = document.getElementById('np-tags').value.trim();
+    const content = document.getElementById('np-content').value.trim();
+    document.getElementById('f-title').classList.toggle('has-error', !title);
+    document.getElementById('f-content').classList.toggle('has-error', !content);
+    if(!title || !content) return;
+
+    const tags = tagsRaw ? tagsRaw.split(',').map(t=>t.trim()).filter(Boolean) : [];
+    try{
+      await api('/api/posts', {method:'POST', body: JSON.stringify({title, content, tags})});
+      hideAllModals();
+      showToast('POST /api/posts → 201 Created');
+      await loadPosts();
+    }catch(e){
+      const banner = document.getElementById('postFormError');
+      banner.textContent = e.message;
+      banner.style.display = 'block';
+    }
+  });
+
+  // ---------- Login / Register / Logout ----------
+  const authBtn = document.getElementById('authBtn');
+  const userChip = document.getElementById('userChip');
+  const authStatusText = document.getElementById('authStatusText');
+  const sessionStatus = document.getElementById('sessionStatus');
+  const sessionToken = document.getElementById('sessionToken');
+  const tabLogin = document.getElementById('tabLogin');
+  const tabRegister = document.getElementById('tabRegister');
+
+  function setAuthMode(mode){
+    authMode = mode;
+    tabLogin.classList.toggle('active', mode === 'login');
+    tabRegister.classList.toggle('active', mode === 'register');
+    document.getElementById('authModalTitle').textContent = mode === 'login' ? 'Log in' : 'Register';
+    document.getElementById('authRouteTag').textContent = mode === 'login' ? 'POST /api/auth/login' : 'POST /api/auth/register';
+    document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'Log in' : 'Create account';
+    document.getElementById('authHelperText').style.display = mode === 'login' ? 'block' : 'none';
+    document.getElementById('authFormError').style.display = 'none';
+  }
+  tabLogin.addEventListener('click', ()=>setAuthMode('login'));
+  tabRegister.addEventListener('click', ()=>setAuthMode('register'));
+
+  authBtn.addEventListener('click', ()=>{
+    if(currentUser){
+      token = null; currentUser = null;
+      localStorage.removeItem('ps_token'); localStorage.removeItem('ps_user');
+      updateAuthUI(); renderFeed();
+      showToast('Session ended — token cleared');
+    } else {
+      document.getElementById('lg-username').value = '';
+      document.getElementById('lg-password').value = '';
+      ['f-username','f-password'].forEach(id=>document.getElementById(id).classList.remove('has-error'));
+      setAuthMode('login');
+      showModal(loginModal);
+    }
+  });
+
+  document.getElementById('authSubmitBtn').addEventListener('click', async ()=>{
+    const uname = document.getElementById('lg-username').value.trim();
+    const pass = document.getElementById('lg-password').value.trim();
+    document.getElementById('f-username').classList.toggle('has-error', !uname);
+    document.getElementById('f-password').classList.toggle('has-error', !pass || pass.length < 4);
+    if(!uname || !pass || pass.length < 4) return;
+
+    const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    try{
+      const data = await api(path, {method:'POST', body: JSON.stringify({username:uname, password:pass})});
+      token = data.access_token;
+      currentUser = data.user.username;
+      localStorage.setItem('ps_token', token);
+      localStorage.setItem('ps_user', currentUser);
+      hideAllModals();
+      updateAuthUI();
+      showToast(`${path} → ${authMode === 'login' ? '200 OK' : '201 Created'}`);
+      await loadPosts();
+    }catch(e){
+      const banner = document.getElementById('authFormError');
+      banner.textContent = e.message;
+      banner.style.display = 'block';
+    }
+  });
+
+  function updateAuthUI(){
+    if(currentUser){
+      userChip.style.display = 'inline-block';
+      userChip.textContent = '@' + currentUser;
+      authBtn.textContent = 'Log out';
+      authStatusText.textContent = 'auth: bearer token active';
+      sessionStatus.textContent = 'Authenticated';
+      sessionToken.textContent = token ? token.slice(0,14) + '…' : '—';
+    } else {
+      userChip.style.display = 'none';
+      authBtn.textContent = 'Log in';
+      authStatusText.textContent = 'auth: anonymous';
+      sessionStatus.textContent = 'Anonymous';
+      sessionToken.textContent = '—';
+    }
+  }
+
+  // ---------- Toast ----------
+  let toastTimer;
+  function showToast(msg, isError){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+  }
+
+  // ---------- Boot ----------
+  updateAuthUI();
+  checkApi();
+  loadPosts();
+</script>
+
+</body>
+</html>
