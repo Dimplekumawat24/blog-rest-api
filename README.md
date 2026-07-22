@@ -4,6 +4,10 @@ A working Flask REST API for blog management — posts, comments, and JWT
 authentication — with a small frontend that talks to the real API (no mock
 data, no fake responses). Everything in this zip actually runs.
 
+## Live demo
+
+https://dimplekumawat24.github.io/blog-rest-api/
+
 ## What's included
 
 - **Backend**: Flask + Flask-SQLAlchemy + Flask-JWT-Extended
